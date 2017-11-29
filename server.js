@@ -32,7 +32,7 @@ app.get('/researchGate', function(req, res){
 
 
   fixieRequest('https://www.researchgate.net/profile/Ramon_Bragos', (err, res, body) => {
-    console.log(`Got response: ${res}`);
+    console.log(`Got response: ${res} \n Got error: ${err}`);
   });
 
   /*var str = '';
