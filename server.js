@@ -3,6 +3,7 @@ var path = require('path');
 var _ = require('underscore');
 var bodyParser = require('body-parser');
 var request = require('request');
+var fixieRequest = request.defaults({'proxy': process.env.FIXIE_URL});
 
 var app = express();
 var PORT = process.env.PORT || 8080;
@@ -29,19 +30,9 @@ app.post('/linkedIn', function(req, res){
 
 app.get('/researchGate', function(req, res){
 
-  console.log("entro");
-  var options = {
-    proxy: 'http://mzzjp7wp88yvnb:OVWIdAQYvs3-YmLH7jQa6Z75zQ@us-east-static-04.quotaguard.com:9293',
-    url: 'https://www.researchgate.net/profile/Ramon_Bragos',
-    headers: {
-        'User-Agent': 'node.js'
-    }
-  };
 
-  request(options, function (error, response, body) {
-    console.log('error:', error); // Print the error if one occurred
-    console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
-    console.log('body:', body); // Print the HTML for the Google homepage.
+  fixieRequest('https://www.researchgate.net/profile/Ramon_Bragos', (err, res, body) => {
+    console.log(`Got response: ${res.statusCode}`);
   });
 
   /*var str = '';
