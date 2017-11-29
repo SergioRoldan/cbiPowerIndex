@@ -32,7 +32,7 @@ app.get('/researchGate', function(req, res){
   console.log("entro");
   var options = {
     proxy: process.env.QUOTAGUARDSTATIC_URL,
-    url: 'https://www.researchgate.net/profile/Ramon_Bragos'
+    url: 'https://www.researchgate.net/profile/Ramon_Bragos',
     headers: {
         'User-Agent': 'node.js'
     }
