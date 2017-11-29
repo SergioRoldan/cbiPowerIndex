@@ -21,10 +21,10 @@ $("#rgButton").on('click', function(event) {
   $.get("https://cbi-test.herokuapp.com/researchGate", function(data, status) {
     console.log("Status: " + status);
     console.log("Data: " + data);
-    dataConverted = data.replace(/<(?:.|\n)*?>/gm, '');
+    //dataConverted = data.replace(/<(?:.|\n)*?>/gm, '');
 
 
-    $("#results").append("<p>" + dataConverted + "</p>" );
+    $("#results").append("<p>" + data + "</p>" );
   });
 
 });
