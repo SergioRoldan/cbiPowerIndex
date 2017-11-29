@@ -24,7 +24,7 @@ $("#rgButton").on('click', function(event) {
     dataConverted = data.replace(/<(?:.|\n)*?>/gm, '');
 
 
-    $("#results").append("<p>" + data + "</p>" );
+    $("#results").append("<p>" + dataConverted + "</p>" );
   });
 
 });
