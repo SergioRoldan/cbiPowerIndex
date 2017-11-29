@@ -2,7 +2,7 @@ var express = require('express');
 var path = require('path');
 var _ = require('underscore');
 var bodyParser = require('body-parser');
-var https = require('https');
+var request = require('request');
 
 var app = express();
 var PORT = process.env.PORT || 8080;
@@ -31,12 +31,21 @@ app.get('/researchGate', function(req, res){
 
   console.log("entro");
   var options = {
-    hostname: 'www.researchgate.net',
-    path: '/profile/Ramon_Bragos',
-    method: 'GET'
+    proxy: process.env.QUOTAGUARDSTATIC_URL,
+    url: 'https://www.researchgate.net/profile/Ramon_Bragos'
+    headers: {
+        'User-Agent': 'node.js'
+    }
   };
 
-  var str = '';
+  request(options, function (error, response, body) {
+    console.log('error:', error); // Print the error if one occurred
+    console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
+    console.log('body:', body); // Print the HTML for the Google homepage.
+  });
+
+  /*var str = '';
+
 
   var callback = function(response) {
 
@@ -57,7 +66,7 @@ app.get('/researchGate', function(req, res){
     });
   };
 
-  https.request(options, callback).end();
+  request(options, callback).end();*/
 
 
 });
