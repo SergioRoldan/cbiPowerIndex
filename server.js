@@ -18,12 +18,12 @@ var searchName = [];
 //request callback
 function getRG(error, response, body) {
   if(typeof response === 'undefined') {
-    fixieRequest({url: url[this.id]}, getRG.bind({id: socket.id}));
+    fixieRequest({url: url[this.id]}, getRG.bind({id: this.id}));
     console.log("Proxy tunneling timeout");
   } else {
     if(response.statusCode === 429) {
       console.log("Status 429");
-      fixieRequest({url: url[this.id]}, getRG.bind({id: socket.id}));
+      fixieRequest({url: url[this.id]}, getRG.bind({id: this.id}));
     } else {
 
       link[this.id] = matchHandler.getMatch(body, matchHandler.linkRegEx(), 1);
@@ -39,12 +39,12 @@ function getRG(error, response, body) {
       fixieRequest(newOptions, function(error, response, body) {
 
         if(typeof response === 'undefined') {
-          fixieRequest({url: url[this.id]}, getRG.bind({id: socket.id}));
+          fixieRequest({url: url[this.id]}, getRG.bind({id: this.id}));
           console.log("Proxy tunneling timeout");
         } else {
           if(response.statusCode === 429) {
             console.log("Status 429");
-            fixieRequest({url: url[this.id]}, getRG.bind({id: socket.id}));
+            fixieRequest({url: url[this.id]}, getRG.bind({id: this.id}));
           } else {
 
             let results = {
