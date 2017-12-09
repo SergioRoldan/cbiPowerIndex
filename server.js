@@ -54,11 +54,10 @@ function getRG(error, response, body) {
             console.log("Inside here");
 
             let results = {
-              ItemsName: [],
-              ItemsType: [],
-              CurrentResearch: [],
+              ResearchExperience: [],
               Skills: [],
-              ResearchExperience: []
+              CurrentResearch: [],
+              Items: []
             };
 
             let name = matchHandler.getMatch(body, matchHandler.nameRegEx(), 1);
@@ -68,7 +67,12 @@ function getRG(error, response, body) {
 
             let type = matchHandler.getMatches(body, matchHandler.typeRegEx(), 1);
             if (typeof type !== 'undefined') {
-                results.ItemsType = type;
+                for(var i=0; i<type.length; i++) {
+                  results.Items[i] = {
+                    Type: type[i],
+                    Name: ''
+                  };
+                }
             }
 
             let items = matchHandler.getMatches(body, matchHandler.itemsRegEx(), 1);
@@ -76,7 +80,7 @@ function getRG(error, response, body) {
               let links = [];
               for(let i=0; i<items.length; i++) {
                 let splitted = items[i].split("\" itemProp=\"mainEntityOfPage\">");
-                results.ItemsName.push(splitted[1]);
+                results.Items[i].Name = splitted[1];
                 links.push(splitted[0]);
               }
               //--//
@@ -247,7 +251,6 @@ io.on('connection', function(socket) {
   console.log("User connected");
 
   socket.on('command', function (command) {
-
     if(command.comm === 'Hello') {
       socket.emit('state', {
         text: 'Socket connected'
@@ -257,6 +260,14 @@ io.on('connection', function(socket) {
       searchName[socket.id] = command.extra;
       getProxy.getNewProxy(request, getProxyCb, socket.id);
     }
+  });
+
+  socket.on('disconnect', function() {
+    delete proxy[socket.id];
+    delete link[socket.id];
+    delete url[socket.id];
+    delete searchName[socket.id];
+    console.log('User disconnected');
   });
 
 });
