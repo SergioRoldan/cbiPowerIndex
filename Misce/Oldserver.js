@@ -6,8 +6,10 @@ var io = require('socket.io')(http);
 
 //node modules
 var request = require('request');
+var getProxy = require('./getProxy.js')(proxy);
 var matchHandler = require('./match.js')();
 
+var proxy = [];
 var link = [];
 var url = [];
 var searchName = [];
@@ -16,12 +18,12 @@ var searchName = [];
 //request callback
 function getRG(error, response, body) {
   if(typeof response === 'undefined') {
-    request({url: url[this.id]}, getRG.bind({id: socket.id}));
+    getProxy.getNewProxy(request, getProxyCb.bind({id: this.id}));
     console.log("Proxy tunneling timeout");
   } else {
     if(response.statusCode === 429) {
       console.log("Status 429");
-      request({url: url[this.id]}, getRG.bind({id: socket.id}));
+      getProxy.getNewProxy(request, getProxyCb.bind({id: this.id}));
     } else {
 
       link[this.id] = matchHandler.getMatch(body, matchHandler.linkRegEx(), 1);
@@ -31,19 +33,25 @@ function getRG(error, response, body) {
       //console.log(link);
 
       let newOptions = {
-        url: url[this.id]
+        url: url[this.id],
+        proxy: proxy[this.id]
       };
 
       request(newOptions, function(error, response, body) {
 
+        console.log("Inicio del callback"+this.id);
+        //console.log(body);
+
         if(typeof response === 'undefined') {
-          request({url: url[this.id]}, getRG.bind({id: socket.id}));
+          getProxy.getNewProxy(request, getProxyCb.bind({id: this.id}));
           console.log("Proxy tunneling timeout");
         } else {
           if(response.statusCode === 429) {
             console.log("Status 429");
-            request({url: url[this.id]}, getRG.bind({id: socket.id}));
+            getProxy.getNewProxy(request, getProxyCb.bind({id: this.id}));
           } else {
+            console.log("Id: "+ this.id);
+            console.log("Inside here");
 
             let results = {
               ResearchExperience: [],
@@ -79,7 +87,8 @@ function getRG(error, response, body) {
               for(var i=0; i<links.length; i++) {
                 let newUrl = 'https://www.researchgate.net/publication/' + links[i];
                 let newOptions = {
-                  url: newUrl
+                  url: newUrl,
+                  proxy: proxy[this.id]
                 };
 
                 let newRegex = /(?:<h1 class="publication-title" itemProp="headline">)(.{1,250})(?:<\/h1><div class="publication-meta">)/g;
@@ -151,7 +160,8 @@ function getRG(error, response, body) {
 
               for(let i=2; i<=larger; i++) {
                 let newOptions = {
-                  url: url+'/'+i
+                  url: url+'/'+i,
+                  proxy: proxy
                 };
                 setTimeout(function() {
                   request(newOptions, function(error, response, body) {
@@ -172,7 +182,8 @@ function getRG(error, response, body) {
                       for(var i=0; i<links.length; i++) {
                         let newUrl = 'https://www.researchgate.net/publication/' + links[i];
                         let newOptions = {
-                          url: newUrl
+                          url: newUrl,
+                          proxy: proxy
                         };
 
                         let newRegex = /(?:<h1 class="publication-title" itemProp="headline">)(.{1,350})(?:<\/h1><div class="publication-meta">)/g;
@@ -203,13 +214,41 @@ function getRG(error, response, body) {
   }
 }
 
+function checkProxyCb(error, response, body) {
+  if(typeof response === 'undefined') {
+    console.log("Invalid proxy");
+    getProxy.getNewProxy(request, callback, this.id);
+  } else {
+
+    console.log('Got proxy, code: ' + response.statusCode);
+    console.log("Id: "+ this.id);
+    let options = {
+      url: 'https://www.researchgate.net/search/authors?q='+searchName[this.id],
+      proxy: proxy[this.id]
+    };
+
+    request(options, getRG.bind({id: this.id}));
+  }
+};
+
+function getProxyCb(error, response, body){
+  if (JSON.parse(body).protocol === 'http') {
+    proxy[this.id] = JSON.parse(body).curl;
+    console.log("http proxy: " + proxy[this.id]);
+    console.log("Id: "+ this.id);
+    getProxy.checkProxy(request, checkProxyCb, this.id);
+  } else {
+    getProxy.getNewProxy(request, getProxyCb, this.id);
+  }
+};
+
 var bodyParser = require('body-parser');
 
 app.use(express.static(__dirname + '/public'));
 
 io.on('connection', function(socket) {
 
-  console.log("User connected: " + socket.id);
+  console.log("User connected");
 
   socket.on('command', function (command) {
     if(command.comm === 'Hello') {
@@ -217,6 +256,8 @@ io.on('connection', function(socket) {
         text: 'Socket connected'
       });
     } else if(command.comm == 'RG') {
+      //console.log(command.extra);
+
 
       searchName[socket.id] = command.extra;
       let options = {
@@ -228,6 +269,7 @@ io.on('connection', function(socket) {
   });
 
   socket.on('disconnect', function() {
+    delete proxy[socket.id];
     delete link[socket.id];
     delete url[socket.id];
     delete searchName[socket.id];
