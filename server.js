@@ -6,6 +6,8 @@ var io = require('socket.io')(http);
 
 //node modules
 var request = require('request');
+const fixieRequest = request.defaults({'proxy': process.env.FIXIE_URL});
+
 var matchHandler = require('./match.js')();
 
 var link = [];
@@ -16,12 +18,12 @@ var searchName = [];
 //request callback
 function getRG(error, response, body) {
   if(typeof response === 'undefined') {
-    request({url: url[this.id]}, getRG.bind({id: socket.id}));
+    fixieRequest({url: url[this.id]}, getRG.bind({id: socket.id}));
     console.log("Proxy tunneling timeout");
   } else {
     if(response.statusCode === 429) {
       console.log("Status 429");
-      request({url: url[this.id]}, getRG.bind({id: socket.id}));
+      fixieRequest({url: url[this.id]}, getRG.bind({id: socket.id}));
     } else {
 
       link[this.id] = matchHandler.getMatch(body, matchHandler.linkRegEx(), 1);
@@ -34,15 +36,15 @@ function getRG(error, response, body) {
         url: url[this.id]
       };
 
-      request(newOptions, function(error, response, body) {
+      fixieRequest(newOptions, function(error, response, body) {
 
         if(typeof response === 'undefined') {
-          request({url: url[this.id]}, getRG.bind({id: socket.id}));
+          fixieRequest({url: url[this.id]}, getRG.bind({id: socket.id}));
           console.log("Proxy tunneling timeout");
         } else {
           if(response.statusCode === 429) {
             console.log("Status 429");
-            request({url: url[this.id]}, getRG.bind({id: socket.id}));
+            fixieRequest({url: url[this.id]}, getRG.bind({id: socket.id}));
           } else {
 
             let results = {
@@ -84,7 +86,7 @@ function getRG(error, response, body) {
 
                 let newRegex = /(?:<h1 class="publication-title" itemProp="headline">)(.{1,250})(?:<\/h1><div class="publication-meta">)/g;
                 setTimeout(function() {
-                  request(newOptions, function(error, response, body) {
+                  fixieRequest(newOptions, function(error, response, body) {
 
                       if(typeof response !== 'undefined') {
                           let item = matchHandler.getMatches(body, newRegex, 1);
@@ -154,7 +156,7 @@ function getRG(error, response, body) {
                   url: url+'/'+i
                 };
                 setTimeout(function() {
-                  request(newOptions, function(error, response, body) {
+                  fixieRequest(newOptions, function(error, response, body) {
                     let type = matchHandler.getMatches(body, matchHandler.typeRegEx(), 1);
                     if (typeof type !== 'undefined') {
                       //console.log(type);
@@ -177,7 +179,7 @@ function getRG(error, response, body) {
 
                         let newRegex = /(?:<h1 class="publication-title" itemProp="headline">)(.{1,350})(?:<\/h1><div class="publication-meta">)/g;
                         setTimeout(function() {
-                          request(newOptions, function(error, response, body) {
+                          fixieRequest(newOptions, function(error, response, body) {
 
                               if(typeof response !== 'undefined') {
                                   let item = matchHandler.getMatches(body, newRegex, 1);
@@ -222,7 +224,7 @@ io.on('connection', function(socket) {
       let options = {
         url: 'https://www.researchgate.net/search/authors?q='+searchName[socket.id],
       };
-      request(options, getRG.bind({id: socket.id}));
+      fixieRequest(options, getRG.bind({id: socket.id}));
 
     }
   });
