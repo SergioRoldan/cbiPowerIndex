@@ -1,50 +1,83 @@
 var express = require('express');
-var PORT = process.env.PORT || 8080;
+var PORT = process.env.PORT || 55555;
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
 //node modules
 var request = require('request');
-const fixieRequest = request.defaults({'proxy': process.env.FIXIE_URL});
-
+var getProxy = require('./getProxy.js')(proxy);
 var matchHandler = require('./match.js')();
 
+var proxy = [];
 var link = [];
 var url = [];
 var searchName = [];
-
+var retry = [];
 
 //request callback
 function getRG(error, response, body) {
+  //setTimeout( function() {
+    if(io.sockets.connected[this.id] != undefined) {
+      io.sockets.connected[this.id].emit('state', {
+        text: 'Retrieving data. One of our trained hedgehogs is working on it. Please wait'
+      });
+    }
+  //}.bind({id: this.id}), 0 );
+
   if(typeof response === 'undefined') {
-    fixieRequest({url: url[this.id]}, getRG.bind({id: this.id}));
+    setTimeout( function() {
+      getProxy.getNewProxy(request, getProxyCb.bind({id: this.id}));
+    }.bind({id: this.id}), 0 );
     console.log("Proxy tunneling timeout");
   } else {
     if(response.statusCode === 429) {
       console.log("Status 429");
-      fixieRequest({url: url[this.id]}, getRG.bind({id: this.id}));
+      setTimeout( function() {
+        getProxy.getNewProxy(request, getProxyCb.bind({id: this.id}));
+      }.bind({id: this.id}), 0 );
     } else {
-
+      if(io.sockets.connected[this.id] != undefined) {
+        io.sockets.connected[this.id].emit('state', {
+          text: 'Processing data'
+        });
+      }
       link[this.id] = matchHandler.getMatch(body, matchHandler.linkRegEx(), 1);
-      console.log(link[this.id]);
+      if(link[this.id] === 'undefined') {
+        if(io.sockets.connected[this.id] != undefined) {
+          io.sockets.connected[this.id].emit('state', {
+            text: 'Not researcher matched with this name, please try to change it'
+          });
+        }
+        return;
+      }
+      console.log("Link "+ link[this.id]);
+      if(link[this.id] == undefined) {
+        if(io.sockets.connected[this.id] != undefined) {
+          io.sockets.connected[this.id].emit('state', {
+            text: 'Error researcher not found'
+          });
+        }
+        return;
+      }
       url[this.id] = 'https://www.researchgate.net/profile/'+link[this.id];
       //console.log(url[this.id]);
       //console.log(link);
 
       let newOptions = {
-        url: url[this.id]
+        url: url[this.id],
+        proxy: proxy[this.id]
       };
 
-      fixieRequest(newOptions, function(error, response, body) {
+      request(newOptions, function(error, response, body) {
 
         if(typeof response === 'undefined') {
-          fixieRequest({url: url[this.id]}, getRG.bind({id: this.id}));
+          getProxy.getNewProxy(request, getProxyCb.bind({id: this.id}));
           console.log("Proxy tunneling timeout");
         } else {
           if(response.statusCode === 429) {
             console.log("Status 429");
-            fixieRequest({url: url[this.id]}, getRG.bind({id: this.id}));
+            getProxy.getNewProxy(request, getProxyCb.bind({id: this.id}));
           } else {
 
             let results = {
@@ -53,6 +86,13 @@ function getRG(error, response, body) {
               CurrentResearch: [],
               Items: []
             };
+
+
+
+            let photo = matchHandler.getMatch(body, matchHandler.photoRegEx(), 1);
+            if (typeof photo !== 'undefined') {
+              results.link = photo;
+            }
 
             let name = matchHandler.getMatch(body, matchHandler.nameRegEx(), 1);
             if (typeof name !== 'undefined') {
@@ -69,6 +109,9 @@ function getRG(error, response, body) {
                 }
             }
 
+            let contractName = link[this.id].replace(new RegExp('_','g')," ");
+            results.contractName = contractName;
+
             let items = matchHandler.getMatches(body, matchHandler.itemsRegEx(), 1);
             if (typeof items !== 'undefined') {
               let links = [];
@@ -81,33 +124,53 @@ function getRG(error, response, body) {
               for(var i=0; i<links.length; i++) {
                 let newUrl = 'https://www.researchgate.net/publication/' + links[i];
                 let newOptions = {
-                  url: newUrl
+                  url: newUrl,
+                  proxy: proxy[this.id]
                 };
 
-                let newRegex = /(?:<h1 class="publication-title" itemProp="headline">)(.{1,250})(?:<\/h1><div class="publication-meta">)/g;
+
                 setTimeout(function() {
-                  fixieRequest(newOptions, function(error, response, body) {
+                  request(newOptions, function(error, response, body) {
 
-                      if(typeof response !== 'undefined') {
-                          let item = matchHandler.getMatches(body, newRegex, 1);
-                          //console.log(item[0]);
+                    if(typeof response === 'undefined') {
+                      console.log("Proxy tunneling timeout");
+                    } else {
+                      //Check for tooManyRequests header & get another proxy
+                      if(response.statusCode === 429) {
+                        console.log("Status 429");
+                      } else {
+                        let namePaper = /(?:<h1 class="publication-title" itemProp="headline">)(.{1,250})(?:<\/h1><div class="publication-meta">)/g;
+                        let name = matchHandler.getMatch(body, namePaper, 1);
+                        console.log("Name: " + name);
+                        var rcPaper = /(?:<span class="publication-resource-link-amount">)(\d*)(?:<\/span>)/g;
+                        let rc = matchHandler.getMatches(body, rcPaper, 1);
+                        console.log("Citations: " + rc[0] + " References: "+ rc[1]);
+                        let paper = {
+                          name: name,
+                          citations: rc[0],
+                          references: rc[1]
+                        }
+                        if(io.sockets.connected[this.id] != undefined) {
+                          io.sockets.connected[this.id].emit("paper", paper);
+                        }
                       }
+                    }
 
-                  });
-                }, 50*i);
+                  }.bind({id: this.id}));
+                }.bind({id: this.id}), 50*i);
               }
               //--//
             }
 
             let insDep = matchHandler.getMatches(body, matchHandler.institutionRegEx(), 1);
-            if(typeof insDep !== 'undefined') {
+            if(typeof insDep[0] !== 'undefined') {
               let splitted = insDep[0].split("\"><b>");
               results.Institution = splitted[1];
               let toGetDepartment = splitted[0];
               let departmentRegEx = new RegExp('(?:<a class="nova-e-link nova-e-link--color-inherit nova-e-link--theme-silent" href="institution\/'+ toGetDepartment+'\/)(.{1,150})(?:<\/a><\/div>)', 'g');
 
               let department = matchHandler.getMatches(body, departmentRegEx, 1);
-              if(typeof department !== 'undefined') {
+              if(typeof department[0] !== 'undefined' && department[0] != undefined) {
                 results.Department = department[0].split("\">")[1];
               }
             }
@@ -153,10 +216,11 @@ function getRG(error, response, body) {
 
               for(let i=2; i<=larger; i++) {
                 let newOptions = {
-                  url: url+'/'+i
+                  url: url+'/'+i,
+                  proxy: proxy
                 };
                 setTimeout(function() {
-                  fixieRequest(newOptions, function(error, response, body) {
+                  request(newOptions, function(error, response, body) {
                     let type = matchHandler.getMatches(body, matchHandler.typeRegEx(), 1);
                     if (typeof type !== 'undefined') {
                       //console.log(type);
@@ -174,12 +238,13 @@ function getRG(error, response, body) {
                       for(var i=0; i<links.length; i++) {
                         let newUrl = 'https://www.researchgate.net/publication/' + links[i];
                         let newOptions = {
-                          url: newUrl
+                          url: newUrl,
+                          proxy: proxy
                         };
 
                         let newRegex = /(?:<h1 class="publication-title" itemProp="headline">)(.{1,350})(?:<\/h1><div class="publication-meta">)/g;
                         setTimeout(function() {
-                          fixieRequest(newOptions, function(error, response, body) {
+                          request(newOptions, function(error, response, body) {
 
                               if(typeof response !== 'undefined') {
                                   let item = matchHandler.getMatches(body, newRegex, 1);
@@ -196,8 +261,15 @@ function getRG(error, response, body) {
                 //--//
               }
             }
+            if(io.sockets.connected[this.id] != undefined) {
+              io.sockets.connected[this.id].emit('state', {
+                text: 'Data received'
+              });
+            }
             console.log(results);
-            io.sockets.connected[this.id].emit("results", results);
+            if(io.sockets.connected[this.id] != undefined) {
+              io.sockets.connected[this.id].emit("results", results);
+            }
           }
         }
       }.bind({id: this.id}));
@@ -205,13 +277,52 @@ function getRG(error, response, body) {
   }
 }
 
+function getProxyCb(error, response, body){
+  retry[this.id] += 1;
+  if(retry[this.id] >= 2 && retry[this.id] < 15) {
+    if(io.sockets.connected[this.id] != undefined) {
+      io.sockets.connected[this.id].emit('state', {
+        text: 'Please wait, this will take less than the construction of the LHC'
+      });
+    }
+  } else if(retry[this.id] >= 15) {
+    if(io.sockets.connected[this.id] != undefined) {
+      io.sockets.connected[this.id].emit('state', {
+        text: 'Ups, we\'re sorry something gone wrong. Try again in a few seconds'
+      });
+    }
+    console.log("Time out");
+    return;
+  } else {
+    if(io.sockets.connected[this.id] != undefined) {
+      io.sockets.connected[this.id].emit('state', {
+        text: 'Connecting'
+      });
+    }
+  }
+  if (JSON.parse(body).protocol === 'http') {
+    proxy[this.id] = JSON.parse(body).curl;
+    console.log("http proxy: " + proxy[this.id]);
+
+    let options = {
+      url: 'https://www.researchgate.net/search/authors?q='+searchName[this.id],
+      proxy: proxy[this.id]
+    };
+
+    request(options, getRG.bind({id: this.id}));
+  } else {
+    //console.log("Not http");
+    getProxy.getNewProxy(request, getProxyCb.bind({id: this.id}));
+  }
+};
+
 var bodyParser = require('body-parser');
 
 app.use(express.static(__dirname + '/public'));
 
 io.on('connection', function(socket) {
 
-  console.log("User connected: " + socket.id);
+  console.log("User connected");
 
   socket.on('command', function (command) {
     if(command.comm === 'Hello') {
@@ -219,17 +330,23 @@ io.on('connection', function(socket) {
         text: 'Socket connected'
       });
     } else if(command.comm == 'RG') {
-
+      //console.log(command.extra);
+      if(io.sockets.connected[this.id] != undefined) {
+        io.sockets.connected[this.id].emit('state', {
+          text: 'Socket connected'
+        });
+      }
+      console.log("Command RG: " + socket.id);
+      retry[socket.id] = 0;
       searchName[socket.id] = command.extra;
-      let options = {
-        url: 'https://www.researchgate.net/search/authors?q='+searchName[socket.id],
-      };
-      fixieRequest(options, getRG.bind({id: socket.id}));
+      let id = socket.id;
+      getProxy.getNewProxy(request, getProxyCb.bind({id: id}));
 
     }
   });
 
   socket.on('disconnect', function() {
+    delete proxy[socket.id];
     delete link[socket.id];
     delete url[socket.id];
     delete searchName[socket.id];

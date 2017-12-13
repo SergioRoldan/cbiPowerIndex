@@ -6,7 +6,7 @@ module.exports = function(proxy) {
     //Get new proxy
     getNewProxy: function(myRequest, callback, id) {
       let options= {
-        url: 'https://gimmeproxy.com/api/getProxy?protocol=http'
+        url: 'https://gimmeproxy.com/api/getProxy?protocol=http&get=true&supportsHttps=true&port=80&api_key=cbf6a368-b57f-4e3c-9ebb-c6c375d6e0ea'
       };
       myRequest(options, callback.bind({id: id}));
     },

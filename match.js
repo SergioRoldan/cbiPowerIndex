@@ -59,6 +59,9 @@ module.exports = function() {
     },
     posExpRegEx: function() {
       return  /(?:<\/b><\/div><div class="nova-e-text nova-e-text--size-m nova-e-text--family-sans-serif nova-e-text--spacing-none nova-e-text--color-inherit sub-item-text">)(.{1,155})(?:<\/div><)/g;
+    },
+    photoRegEx: function() {
+      return /(?:" src="https:\/\/i1.rgstatic.net\/ii\/profile.image\/)(.{1,100})(?:"\/><h1>)/g;
     }
   };
 };
