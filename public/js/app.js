@@ -41,6 +41,10 @@ $("#rgButton").on('click', function(event) {
   $('#image-holder').html('');
   $("#results").html('');
 
+  if($("#inputRschrName").val() === "") {
+      return;
+  }
+
   let rschr = toTitleCase($("#inputRschrName").val());
 
   contract.findResearcherByName.call(rschr,  {from: coinbase},function(error, results) {
@@ -50,7 +54,7 @@ $("#rgButton").on('click', function(event) {
       $('#ropsten').html('<div class="alert alert-danger" role="alert">Researcher not found in the Blockchain</div>');
       $("#rgButton").prop('disabled', true);
       $(".loader").show();
-      $("#state").css('width', "calc(99%)");
+      $("#state").css('width', "calc(95%)");
 
       if(rschr === "") {
         $("#results").html('');
@@ -58,8 +62,6 @@ $("#rgButton").on('click', function(event) {
       } else {
         socket.emit('command', {comm: 'RG', extra: rschr});
       }
-
-
 
     } else {
 
@@ -75,8 +77,6 @@ $("#rgButton").on('click', function(event) {
       $("#results").append('<div class="alert alert-info clean" role="alert">CurrentPosition: '+str[3]+'</div>');
       $("#results").append('<div class="alert alert-info clean" role="alert">ResearchGateScore: '+str[4].charCodeAt(0)+'</div>');
 
-
-
       let char = str[5].substr(str[5].length-1);
       Read = str[5].replace(new RegExp(char, 'g'), "");
       console.log(Read);
@@ -85,19 +85,21 @@ $("#rgButton").on('click', function(event) {
       let It = str[7].replace(new RegExp(char, 'g'), "");
       console.log(It);
 
-
       let nRead = '';
       for(let i=0; i<Read.length; i++) {
         nRead += Read.charCodeAt(i);
       }
+
       let nCit = '';
       for(let i=0; i<Cit.length; i++) {
         nCit += Cit.charCodeAt(i);
       }
+
       let nIt = '';
       for(let i=0; i<It.length; i++) {
         nIt += It.charCodeAt(i);
       }
+
       $("#results").append('<div class="alert alert-info clean" role="alert"># of reads: '+nRead+'</div>');
       $("#results").append('<div class="alert alert-info clean" role="alert"># of citations: '+nCit+'</div>');
       $("#results").append('<div class="alert alert-info clean" role="alert"># of research items: '+nIt+'</div>');
@@ -110,7 +112,10 @@ $("#rgButton").on('click', function(event) {
       let link = str[11].replace(new RegExp(char, 'g'), "");
 
       if(link === 'undefined') {
-        $("#image").attr("src","/../images/placeholder.png");
+        $("#image").attr("src","/../images/placeholder.jpg");
+        $("#image").show();
+      } else if(link === 'josephine') {
+        $("#image").attr("src","/../images/josephine.jpg");
         $("#image").show();
       } else {
         $("#image").attr("src",'https://i1.rgstatic.net/ii/profile.image/'+str[11]);
@@ -125,7 +130,6 @@ $("#rgButton").on('click', function(event) {
                     fontColor: "#3498db",
                     backgroundColor: '#ffffff'
                });
-
      	$("#pilar2").circliful({
                      animationStep: 5,
                      foregroundBorderWidth: 5,
@@ -134,7 +138,6 @@ $("#rgButton").on('click', function(event) {
                      fontColor: "#3498db",
                      backgroundColor: '#ffffff'
                 });
-
       $("#pilar3").circliful({
                      animationStep: 5,
                      foregroundBorderWidth: 5,
@@ -162,14 +165,13 @@ socket.on('connect', function() {
 });
 
 socket.on('results', function(results) {
-  $("#results").html('');
 
+  $("#results").html('');
   $("#rgButton").prop('disabled', false);
   $(".loader").hide();
-  $("#state").css('width', "calc(95%)");
+  $("#state").css('width', "calc(99%)");
 
   let rschr = [];
-
 
   rschr.push(toTitleCase(results.contractName));
 
@@ -222,7 +224,7 @@ socket.on('results', function(results) {
     $("#image").attr("src",'https://i1.rgstatic.net/ii/profile.image/'+results.link);
     $("#image").show();
   } else {
-    $("#image").attr("src","/../images/placeholder.png");
+    $("#image").attr("src","/../images/placeholder.jpg");
     $("#image").show();
   }
 
@@ -253,7 +255,6 @@ socket.on('results', function(results) {
                 fontColor: "#3498db",
                 backgroundColor: '#ffffff'
            });
-
   $("#pilar2").circliful({
                  animationStep: 5,
                  foregroundBorderWidth: 5,
@@ -262,7 +263,6 @@ socket.on('results', function(results) {
                  fontColor: "#3498db",
                  backgroundColor: '#ffffff'
             });
-
   $("#pilar3").circliful({
                  animationStep: 5,
                  foregroundBorderWidth: 5,
@@ -286,8 +286,6 @@ socket.on('results', function(results) {
         $("#results").append('<div class="alert alert-info clean" role="alert" style="margin:3px;">'+key +": " +results[key]+'</div>');
     }
   }
-
-
 
   if(write) {
     console.log(rschr);
@@ -322,18 +320,22 @@ socket.on('paper', function(paper) {
   $(".clean").each(function() {
     let str = $(this).text();
     if (str.indexOf(paper.name) >= 0) {
+
       let citations;
       let references;
+
       if(paper.citations == undefined) {
         citations=0;
       } else {
         citations = paper.citations;
       }
+
       if(paper.references == undefined) {
         references=0;
       } else {
         references = paper.references;
       }
+
       $(this).html('');
       let print = "Citations: " + citations + " References: "+ references;
       let html = '<div class="alert alert-info clean col-sm-9" role="alert" style="margin-right:3px; border: none">'
