@@ -1,7 +1,9 @@
-PowerIndex Server and Client Prototype.
+> PowerIndex Server and Client Prototype.
+
 
 > Misce:
 Some discarts and other files needed for the project but not in use in the prototype.
+
 
 > BackEnd:
 
@@ -16,9 +18,11 @@ getProxy.js = Functions to get proxies from gimmeproxy
 
 modules = node modules used for the server
 
+
 > Contracts:
 
 PIF.sol = Factory smart contract to create researchers and store their data
+
 
 > FrontEnd (inside public):
 
