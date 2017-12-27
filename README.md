@@ -1,7 +1,8 @@
-> PowerIndex Server and Client Prototype.
+PowerIndex Server and Client Prototype.
 
 
 > Misce:
+
 Some discarts and other files needed for the project but not in use in the prototype.
 
 
